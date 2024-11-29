@@ -3,6 +3,7 @@ from abc import ABC
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Type
 from unittest import mock
+from warnings import warn
 
 import httpcore
 import httpx
@@ -297,6 +298,15 @@ class HTTPCoreMocker(AbstractRequestMocker):
         Create a `HTTPX` request from transport request arg.
         """
         request = kwargs["request"]
+        if isinstance(request.method, bytes):
+            warn(
+                "The request.method should be an str. "
+                "Decoding bytes will be removed in the next version.",
+                DeprecationWarning,
+            )
+            method = request.method.decode("ascii")
+        else:
+            method = request.method
         raw_url = (
             request.url.scheme,
             request.url.host,
@@ -304,7 +314,7 @@ class HTTPCoreMocker(AbstractRequestMocker):
             request.url.target,
         )
         return httpx.Request(
-            request.method,
+            method,
             parse_url(raw_url),
             headers=request.headers,
             stream=request.stream,
